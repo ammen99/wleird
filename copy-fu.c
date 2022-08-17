@@ -402,7 +402,7 @@ int main(int argc, char *argv[]) {
 	wl_data_device_add_listener(data_device, &data_device_listener, NULL);
 
 
-	toplevel_init(&toplevel);
+	toplevel_init(&toplevel, "wleird-copy-fu");
 	float color[4] = {1.f, 0.3f, 1.f, 1.f};
 	memcpy(toplevel.surface.color, color, sizeof(float[4]));
 

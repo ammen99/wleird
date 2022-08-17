@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
 		wl_pointer_add_listener(pointer, &pointer_listener, NULL);
 	}
 
-	toplevel_init(&toplevel);
+	toplevel_init(&toplevel, "wleird-subsurfaces");
 
 	float color[4] = {1, 1, 1, 1};
 	memcpy(toplevel.surface.color, color, sizeof(float[4]));

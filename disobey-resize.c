@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
 	xdg_toplevel_listener.configure = xdg_toplevel_handle_configure;
 
 	registry_init(display);
-	toplevel_init(&toplevel);
+	toplevel_init(&toplevel, "wleird-disobey-resize");
 
 	float color[4] = {1, 0, 0, 1};
 	memcpy(toplevel.surface.color, color, sizeof(float[4]));

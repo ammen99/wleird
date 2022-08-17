@@ -332,7 +332,7 @@ int main(int argc, char **argv) {
 	registry_init(display);
 
 	xdg_surface_listener.configure = damage_xdg_surface_handle_configure;
-	toplevel_init(&toplevel);
+	toplevel_init(&toplevel, "wleird-damage-paint");
 
 	float color[4] = {1, 1, 0, 1};
 	memcpy(toplevel.surface.color, color, sizeof(float[4]));

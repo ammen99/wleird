@@ -229,7 +229,7 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	toplevel_init(&toplevel);
+	toplevel_init(&toplevel, "wleird-surface-outputs");
 	wl_surface_add_listener(toplevel.surface.wl_surface, &surface_listener,
 		&toplevel_tracker);
 

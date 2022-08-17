@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
 
 	registry_init(display);
 
-	toplevel_init(&toplevel);
+	toplevel_init(&toplevel, "wleird-unmap");
 
 	float color[4] = {1, 1, 1, 1};
 	memcpy(toplevel.surface.color, color, sizeof(float[4]));

@@ -86,7 +86,7 @@ struct xdg_toplevel_listener xdg_toplevel_listener = {
 	.close = xdg_toplevel_handle_close,
 };
 
-void toplevel_init(struct wleird_toplevel *toplevel) {
+void toplevel_init(struct wleird_toplevel *toplevel, const char *app_id) {
 	surface_init(&toplevel->surface);
 
 	toplevel->xdg_surface =
@@ -96,6 +96,11 @@ void toplevel_init(struct wleird_toplevel *toplevel) {
 	toplevel->xdg_toplevel = xdg_surface_get_toplevel(toplevel->xdg_surface);
 	xdg_toplevel_add_listener(toplevel->xdg_toplevel, &xdg_toplevel_listener,
 		toplevel);
+
+    if (app_id) {
+        xdg_toplevel_set_app_id(toplevel->xdg_toplevel, app_id);
+    }
+
 	if (decoration_manager) {
 		// Let the compositor do all the complicated window management
 		struct zxdg_toplevel_decoration_v1 *decoration =

@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	registry_init(display);
-	toplevel_init(&toplevel);
+	toplevel_init(&toplevel, "wleird-frame-callback");
 
 	float color[4] = {1, 0, 0, 1};
 	memcpy(toplevel.surface.color, color, sizeof(float[4]));

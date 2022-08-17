@@ -45,7 +45,7 @@ void registry_init(struct wl_display *display);
 void surface_init(struct wleird_surface *surface);
 void surface_render(struct wleird_surface *surface);
 
-void toplevel_init(struct wleird_toplevel *toplevel);
+void toplevel_init(struct wleird_toplevel *toplevel, const char *app_id);
 
 void default_xdg_surface_handle_configure(void *data,
 	struct xdg_surface *xdg_surface, uint32_t serial);

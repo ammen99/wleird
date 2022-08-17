@@ -127,6 +127,7 @@ int main(int argc, char *argv[]) {
 	xdg_surface_add_listener(xdg_surface, &_xdg_surface_listener, NULL);
 	struct xdg_toplevel *xdg_toplevel = xdg_surface_get_toplevel(xdg_surface);
 	xdg_toplevel_add_listener(xdg_toplevel, &_xdg_toplevel_listener, NULL);
+    xdg_toplevel_set_app_id(xdg_toplevel, "wleird-gamma-blend");
 	wl_surface_commit(main_surface);
 
 	// Wait for the xdg_surface.configure event
