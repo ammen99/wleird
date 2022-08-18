@@ -119,15 +119,9 @@ static void draw(void) {
 }
 
 static void draw_popup(void) {
-	static float alpha_mod = -0.01;
-
 	eglMakeCurrent(egl_display, popup_egl_surface, popup_egl_surface, egl_context);
 	glViewport(0, 0, popup_width, popup_height);
 	glClearColor(popup_red, 0.5f, 0.5f, popup_alpha);
-	popup_alpha += alpha_mod;
-	if (popup_alpha < 0.01 || popup_alpha >= 1.0f) {
-		alpha_mod *= -1.0;
-	}
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	popup_frame_callback = wl_surface_frame(popup_wl_surface);
@@ -259,6 +253,9 @@ static void wl_pointer_enter(void *data, struct wl_pointer *wl_pointer,
 	wl_pointer_set_cursor(wl_pointer, serial, cursor_surface,
 		image->hotspot_x, image->hotspot_y);
 	input_surface = surface;
+
+	cur_x = wl_fixed_to_int(surface_x);
+	cur_y = wl_fixed_to_int(surface_y);
 }
 
 static void wl_pointer_leave(void *data, struct wl_pointer *wl_pointer,
