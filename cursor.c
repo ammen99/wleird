@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	toplevel_init(&toplevel, "wleird-cursor");
-	float color[4] = {1, 1, 1, 1};
+	float color[4] = {0, 1, 1, 1};
 	memcpy(toplevel.surface.color, color, sizeof(float[4]));
 
 	surface_init(&cursor_surface);
