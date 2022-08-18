@@ -25,6 +25,11 @@ wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 math = cc.find_library('m', required: false)
 gbm = dependency('gbm', disabler: true)
 
+wayland_egl    = dependency('wayland-egl')
+wayland_cursor = dependency('wayland-cursor')
+glesv2 = dependency('glesv2')
+egl = dependency('egl')
+
 subdir('protocol')
 
 wleird_deps = [cairo, client_protos, wayland_client]
@@ -64,6 +69,10 @@ clients = {
 	},
 	'gamma-blend': {
 		'src': 'gamma-blend.c',
+	},
+	'layer-shell': {
+		'src': ['egl_common.c', 'layer-shell.c'],
+        'deps': [wayland_client, wayland_cursor, glesv2, egl, wayland_egl]
 	},
 	'resize-loop': {
 		'src': 'resize-loop.c',
