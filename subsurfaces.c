@@ -151,6 +151,11 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 
+    bool nest_subsurfaces = false;
+    if (argc > 1 && !strcmp(argv[1], "nest-subsurfaces")) {
+        nest_subsurfaces = true;
+    }
+
 	registry_init(display);
 
 	struct wl_registry *registry = wl_display_get_registry(display);
@@ -173,7 +178,11 @@ int main(int argc, char *argv[]) {
 	memcpy(toplevel.surface.color, color, sizeof(float[4]));
 
 	for (size_t i = 0; i < subsurfaces_len; ++i) {
-		subsurface_init(&subsurfaces[i], toplevel.surface.wl_surface);
+        if (i == 0 || !nest_subsurfaces) {
+            subsurface_init(&subsurfaces[i], toplevel.surface.wl_surface);
+        } else {
+            subsurface_init(&subsurfaces[i], subsurfaces[i - 1].surface.wl_surface);
+        }
 
 		float color[4] = {i == 0, i == 1, i == 2, 1};
 		memcpy(subsurfaces[i].surface.color, color, sizeof(float[4]));
