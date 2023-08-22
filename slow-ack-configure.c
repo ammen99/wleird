@@ -6,6 +6,9 @@
 
 #define FRAME_DELAY 32
 
+uint32_t default_width = 300;
+uint32_t default_height = 400;
+
 struct configure {
 	uint32_t serial;
 	uint32_t width, height;
@@ -36,8 +39,8 @@ static void callback_handle_done(void *data, struct wl_callback *callback,
 
 	fprintf(stderr, "acking configure %d, width: %d, height: %d\n",
 		current_configure.serial, current_configure.width, current_configure.height);
-	toplevel.surface.width = current_configure.width;
-	toplevel.surface.height = current_configure.height;
+	toplevel.surface.width = current_configure.width ?: default_width;
+	toplevel.surface.height = current_configure.height ?: default_height;
 	xdg_surface_ack_configure(toplevel.xdg_surface, current_configure.serial);
 	surface_render(&toplevel.surface);
 
@@ -91,6 +94,9 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "failed to create display\n");
 		return EXIT_FAILURE;
 	}
+
+	default_width = argc >= 2 ? atoi(argv[1]) : 300;
+	default_height = argc >= 3 ? atoi(argv[2]) : 400;
 
 	xdg_surface_listener.configure = xdg_surface_handle_configure;
 	xdg_toplevel_listener.configure = xdg_toplevel_handle_configure;
