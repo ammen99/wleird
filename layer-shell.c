@@ -2,7 +2,6 @@
 #include <linux/input-event-codes.h>
 #include <assert.h>
 #include <GLES2/gl2.h>
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +33,7 @@ struct wl_callback *frame_callback;
 
 static uint32_t output = UINT32_MAX;
 struct xdg_popup *popup;
+struct xdg_surface *popup_xdg_surface;
 struct wl_surface *popup_wl_surface;
 struct wl_egl_window *popup_egl_window;
 static uint32_t popup_width = 256, popup_height = 256;
@@ -154,6 +154,7 @@ static void popup_destroy(void) {
 	eglDestroySurface(egl_display, popup_egl_surface);
 	wl_egl_window_destroy(popup_egl_window);
 	xdg_popup_destroy(popup);
+	xdg_surface_destroy(popup_xdg_surface);
 	wl_surface_destroy(popup_wl_surface);
 	popup_wl_surface = NULL;
 	popup = NULL;
@@ -176,25 +177,28 @@ static void create_popup(uint32_t serial) {
 	}
 	struct wl_surface *surface = wl_compositor_create_surface(compositor);
 	assert(xdg_wm_base && surface);
-	struct xdg_surface *xdg_surface =
-		xdg_wm_base_get_xdg_surface(xdg_wm_base, surface);
+	popup_xdg_surface = xdg_wm_base_get_xdg_surface(xdg_wm_base, surface);
 	struct xdg_positioner *xdg_positioner =
 		xdg_wm_base_create_positioner(xdg_wm_base);
-	assert(xdg_surface && xdg_positioner);
+	assert(popup_xdg_surface && xdg_positioner);
 
 	xdg_positioner_set_size(xdg_positioner, popup_width, popup_height);
 	xdg_positioner_set_offset(xdg_positioner, 0, 0);
 	xdg_positioner_set_anchor_rect(xdg_positioner, cur_x, cur_y, 1, 1);
 	xdg_positioner_set_anchor(xdg_positioner, XDG_POSITIONER_ANCHOR_BOTTOM_RIGHT);
 
-	popup = xdg_surface_get_popup(xdg_surface, NULL, xdg_positioner);
+	popup = xdg_surface_get_popup(popup_xdg_surface, NULL, xdg_positioner);
 	xdg_popup_grab(popup, seat, serial);
+
+	static const int offx = 100;
+	static const int offy = 100;
+	xdg_surface_set_window_geometry(popup_xdg_surface, offx, offy, popup_width - 2*offx, popup_height - 2*offy);
 
 	assert(popup);
 
 	zwlr_layer_surface_v1_get_popup(layer_surface, popup);
 
-	xdg_surface_add_listener(xdg_surface, &xdg_surface_listener, NULL);
+	xdg_surface_add_listener(popup_xdg_surface, &xdg_surface_listener, NULL);
 	xdg_popup_add_listener(popup, &xdg_popup_listener, NULL);
 
 	wl_surface_commit(surface);
