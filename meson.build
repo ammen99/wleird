@@ -74,6 +74,10 @@ clients = {
 		'src': ['egl_common.c', 'layer-shell.c'],
         'deps': [wayland_client, wayland_cursor, glesv2, egl, wayland_egl]
 	},
+	'wfshell-tester': {
+		'src': ['wfshell-tester.c'],
+        'deps': [wayland_client]
+	},
 	'resize-loop': {
 		'src': 'resize-loop.c',
 	},

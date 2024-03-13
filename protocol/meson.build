@@ -13,7 +13,8 @@ client_protocols = [
 	[wl_protocol_dir, 'stable/xdg-shell/xdg-shell.xml'],
 	[wl_protocol_dir, 'unstable/xdg-decoration/xdg-decoration-unstable-v1.xml'],
 	[wl_protocol_dir, 'unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml'],
-    'wlr-layer-shell-unstable-v1.xml'
+    'wlr-layer-shell-unstable-v1.xml',
+    'wayfire-shell-unstable-v2.xml'
 ]
 
 client_protos_src = []
