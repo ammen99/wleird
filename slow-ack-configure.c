@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h> // Added for signal handling
 #include "client.h"
 
 #define FRAME_DELAY 32
@@ -19,6 +20,8 @@ static struct configure current_configure = { 0 }, next_configure = { 0 };
 static uint32_t countdown = 0;
 static struct wleird_toplevel toplevel = {0};
 static const struct wl_callback_listener callback_listener;
+static volatile sig_atomic_t render_on_sigusr1 = 0; // Flag to indicate SIGUSR1 reception
+
 static void request_frame_callback(void) {
 	struct wl_callback *callback = wl_surface_frame(toplevel.surface.wl_surface);
 	wl_callback_add_listener(callback, &callback_listener, NULL);
@@ -88,6 +91,11 @@ static void xdg_toplevel_handle_configure(void *data,
 	next_configure.height = h;
 }
 
+// Signal handler for SIGUSR1
+static void sigusr1_handler(int signum) {
+    render_on_sigusr1 = 1; // Set the flag to trigger re-render in main loop
+}
+
 int main(int argc, char *argv[]) {
 	struct wl_display *display = wl_display_connect(NULL);
 	if (display == NULL) {
@@ -101,6 +109,14 @@ int main(int argc, char *argv[]) {
 	xdg_surface_listener.configure = xdg_surface_handle_configure;
 	xdg_toplevel_listener.configure = xdg_toplevel_handle_configure;
 
+	// Register SIGUSR1 handler
+	struct sigaction sa = { .sa_handler = sigusr1_handler };
+	sigemptyset(&sa.sa_mask); // Clear sa_mask to not block any signals during handler execution
+	if (sigaction(SIGUSR1, &sa, NULL) == -1) {
+		perror("sigaction");
+		return EXIT_FAILURE;
+	}
+
 	registry_init(display);
 	toplevel_init(&toplevel, "wleird-slow-ack-configure");
 
@@ -108,7 +124,12 @@ int main(int argc, char *argv[]) {
 	memcpy(toplevel.surface.color, color, sizeof(float[4]));
 
 	while (wl_display_dispatch(display) != -1) {
-		// This space intentionally left blank
+		// Check the flag and render if SIGUSR1 was received
+		if (render_on_sigusr1) {
+			fprintf(stderr, "SIGUSR1 received, re-rendering surface\n");
+			surface_render(&toplevel.surface);
+			render_on_sigusr1 = 0; // Reset the flag after handling
+		}
 	}
 
 	return EXIT_SUCCESS;
