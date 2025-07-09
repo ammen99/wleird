@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h> // Added for signal handling
+#include <poll.h>   // Added for poll
+#include <errno.h>  // Added for errno
+
 #include "client.h"
 
 #define FRAME_DELAY 32
@@ -111,7 +114,9 @@ int main(int argc, char *argv[]) {
 
 	// Register SIGUSR1 handler
 	struct sigaction sa = { .sa_handler = sigusr1_handler };
-	sigemptyset(&sa.sa_mask); // Clear sa_mask to not block any signals during handler execution
+	sigemptyset(&sa.sa_mask);
+	// Do NOT set SA_RESTART. We want poll() to return EINTR if a signal arrives.
+	sa.sa_flags = 0;
 	if (sigaction(SIGUSR1, &sa, NULL) == -1) {
 		perror("sigaction");
 		return EXIT_FAILURE;
@@ -123,8 +128,62 @@ int main(int argc, char *argv[]) {
 	float color[4] = {1, 0, 0, 1};
 	memcpy(toplevel.surface.color, color, sizeof(float[4]));
 
-	while (wl_display_dispatch(display) != -1) {
-		// Check the flag and render if SIGUSR1 was received
+	// Get the Wayland display file descriptor
+	int display_fd = wl_display_get_fd(display);
+	if (display_fd < 0) {
+		fprintf(stderr, "Failed to get Wayland display FD\n");
+		return EXIT_FAILURE;
+	}
+
+	struct pollfd pfd = { .fd = display_fd, .events = POLLIN };
+
+	while (true) {
+		// Flush any pending requests to the compositor
+		// This ensures that requests (like wl_surface_commit) are sent
+		// before we wait for events.
+		while (wl_display_flush(display) == -1 && errno == EAGAIN);
+
+		// Prepare to read events. This must be called before poll().
+		// It might return -1 if there are already events buffered.
+		if (wl_display_prepare_read(display) == -1) {
+			// Events are already buffered, dispatch them immediately.
+			wl_display_dispatch_pending(display);
+		} else {
+			// Wait for events on the Wayland display FD, or for a signal.
+			// Use a small timeout (e.g., 100ms) to allow periodic checks of render_on_sigusr1
+			// even if no Wayland events arrive.
+			int ret = poll(&pfd, 1, 100); // 100ms timeout
+
+			if (ret == -1) {
+				if (errno == EINTR) {
+					// Signal received, poll was interrupted.
+					// We need to cancel the prepared read before checking the flag.
+					wl_display_cancel_read(display);
+				} else {
+					// An actual error occurred, not just an interruption.
+					wl_display_cancel_read(display); // Cancel the prepared read
+					fprintf(stderr, "poll failed: %s\n", strerror(errno));
+					exit(EXIT_FAILURE);
+				}
+			} else if (ret > 0 && (pfd.revents & POLLIN)) {
+				// Wayland events are available, read them.
+				if (wl_display_read_events(display) == -1) {
+					fprintf(stderr, "failed to read Wayland events: %s\n", strerror(errno));
+					exit(EXIT_FAILURE);
+				}
+			} else {
+				// Timeout occurred (ret == 0) or other revents.
+				// No Wayland events, cancel the prepared read.
+				wl_display_cancel_read(display);
+			}
+		}
+
+		// Dispatch any events that have been read (either by wl_display_read_events
+		// or those already buffered when prepare_read returned -1).
+		wl_display_dispatch_pending(display);
+
+		// Now, check the flag and render if SIGUSR1 was received.
+		// This check is now performed after each poll cycle or event dispatch.
 		if (render_on_sigusr1) {
 			fprintf(stderr, "SIGUSR1 received, re-rendering surface\n");
 			surface_render(&toplevel.surface);
@@ -132,5 +191,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	// Cleanup (though unreachable in this infinite loop)
+	wl_display_disconnect(display);
 	return EXIT_SUCCESS;
 }
