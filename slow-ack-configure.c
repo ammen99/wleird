@@ -23,7 +23,7 @@ static struct configure current_configure = { 0 }, next_configure = { 0 };
 static uint32_t countdown = 0;
 static struct wleird_toplevel toplevel = {0};
 static const struct wl_callback_listener callback_listener;
-static volatile sig_atomic_t render_on_sigusr1 = 0; // Flag to indicate SIGUSR1 reception
+static volatile sig_atomic_t commit_on_sigusr1 = 0; // Flag to indicate SIGUSR1 reception
 
 static void request_frame_callback(void) {
 	struct wl_callback *callback = wl_surface_frame(toplevel.surface.wl_surface);
@@ -96,7 +96,7 @@ static void xdg_toplevel_handle_configure(void *data,
 
 // Signal handler for SIGUSR1
 static void sigusr1_handler(int signum) {
-    render_on_sigusr1 = 1; // Set the flag to trigger re-render in main loop
+    commit_on_sigusr1 = 1; // Set the flag to trigger re-render in main loop
 }
 
 int main(int argc, char *argv[]) {
@@ -128,7 +128,6 @@ int main(int argc, char *argv[]) {
 	float color[4] = {1, 0, 0, 1};
 	memcpy(toplevel.surface.color, color, sizeof(float[4]));
 
-	// Get the Wayland display file descriptor
 	int display_fd = wl_display_get_fd(display);
 	if (display_fd < 0) {
 		fprintf(stderr, "Failed to get Wayland display FD\n");
@@ -138,60 +137,41 @@ int main(int argc, char *argv[]) {
 	struct pollfd pfd = { .fd = display_fd, .events = POLLIN };
 
 	while (true) {
-		// Flush any pending requests to the compositor
-		// This ensures that requests (like wl_surface_commit) are sent
-		// before we wait for events.
 		while (wl_display_flush(display) == -1 && errno == EAGAIN);
-
-		// Prepare to read events. This must be called before poll().
-		// It might return -1 if there are already events buffered.
 		if (wl_display_prepare_read(display) == -1) {
-			// Events are already buffered, dispatch them immediately.
 			wl_display_dispatch_pending(display);
 		} else {
-			// Wait for events on the Wayland display FD, or for a signal.
-			// Use a small timeout (e.g., 100ms) to allow periodic checks of render_on_sigusr1
-			// even if no Wayland events arrive.
-			int ret = poll(&pfd, 1, 100); // 100ms timeout
+			int ret = poll(&pfd, 1, 100);
 
 			if (ret == -1) {
 				if (errno == EINTR) {
-					// Signal received, poll was interrupted.
-					// We need to cancel the prepared read before checking the flag.
 					wl_display_cancel_read(display);
 				} else {
-					// An actual error occurred, not just an interruption.
-					wl_display_cancel_read(display); // Cancel the prepared read
+					wl_display_cancel_read(display);
 					fprintf(stderr, "poll failed: %s\n", strerror(errno));
 					exit(EXIT_FAILURE);
 				}
 			} else if (ret > 0 && (pfd.revents & POLLIN)) {
-				// Wayland events are available, read them.
 				if (wl_display_read_events(display) == -1) {
 					fprintf(stderr, "failed to read Wayland events: %s\n", strerror(errno));
 					exit(EXIT_FAILURE);
 				}
 			} else {
-				// Timeout occurred (ret == 0) or other revents.
-				// No Wayland events, cancel the prepared read.
 				wl_display_cancel_read(display);
 			}
 		}
 
-		// Dispatch any events that have been read (either by wl_display_read_events
-		// or those already buffered when prepare_read returned -1).
 		wl_display_dispatch_pending(display);
-
-		// Now, check the flag and render if SIGUSR1 was received.
-		// This check is now performed after each poll cycle or event dispatch.
-		if (render_on_sigusr1) {
-			fprintf(stderr, "SIGUSR1 received, re-rendering surface\n");
-			surface_render(&toplevel.surface);
-			render_on_sigusr1 = 0; // Reset the flag after handling
+		if (commit_on_sigusr1) {
+			fprintf(stderr, "SIGUSR1 received, committing surface\n");
+			acked_first_configure = false;
+			toplevel.surface.width = 300;
+			toplevel.surface.height = 400;
+			wl_surface_commit(toplevel.surface.wl_surface);
+			commit_on_sigusr1 = 0;
 		}
 	}
 
-	// Cleanup (though unreachable in this infinite loop)
 	wl_display_disconnect(display);
 	return EXIT_SUCCESS;
 }
